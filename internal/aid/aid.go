@@ -7,6 +7,7 @@ import (
         "encoding/json"
         "github.com/itchyny/gojq"
         "encoding/hex"
+	"path/filepath"
 )
 
 type Compartment struct {
@@ -19,13 +20,17 @@ func check_err(e error) {
   os.Exit(1)
 }
 
-func Generate(p []string) {
+func Generate(p []string, hash string, path string) {
   var result Compartment
   var input map[string]interface{}
   var src_file, dst_json, tmp_json []byte
   var dst_file *os.File
   var err error
-  //f,_ := os.ReadFile(os.Args[1])
+
+  if _, err = os.Stat(filepath.Dir(path)); os.IsNotExist(err) {
+    fmt.Printf("Dir \"%s\" does not exist\n",filepath.Dir(path))
+    os.Exit(1)
+  }
   src_file,err = os.ReadFile(p[0])
   if err != nil {
     check_err(err)
@@ -49,11 +54,11 @@ func Generate(p []string) {
             check_err(err)
           }
         json.Unmarshal([]byte(tmp_json), &result)
-        dst_file, err = os.OpenFile(fmt.Sprintf("/tmp/attest/attest_%d",result.CID), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+        dst_file, err = os.OpenFile(fmt.Sprintf(path,result.CID), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
         if err != nil {
           check_err(err)
         }
-        src := []byte(fmt.Sprintf("0300564c54004f5247%08X", result.AID))
+        src := []byte(fmt.Sprintf(hash, result.AID))
         dst := make([]byte, hex.DecodedLen(len(src)))
         n, err := hex.Decode(dst, src)
         if err != nil {
